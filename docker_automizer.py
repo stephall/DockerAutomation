@@ -77,7 +77,7 @@ class DockerAutomizer(object):
 
         # Construct the shell command to run the container
         # Remark: We provide the (local) port (of the computer), and the generated security token
-        docker_shell_command = 'docker run -it --rm -p ' + port + ':8888 -e JUPYTER_TOKEN=' + jupyter_token + ' -v "${PWD}":/home/jovyan/work ' + image_name
+        docker_shell_command = 'docker run -it --rm -p ' + port + ':8888 -e JUPYTER_TOKEN=' + jupyter_token + ' -v "${PWD}":/home/lab ' + image_name
 
         # Print the shell command
         print(docker_shell_command)
