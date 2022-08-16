@@ -139,9 +139,14 @@ class DockerAutomizer(object):
         # Loop over the splitted items and create the image name for
         # the current directory.
         # Remark: We turn CamelCase to kebab-case.
-        #         E.g. 'FolderName' becomes 'folder-name' or 'BestAPI' becomes 'best-api'.
+        #         E.g. 'FolderName' becomes 'folder-name', 'BestAPI' becomes 'best-api', or 'MLProject' becomes 'ml-project'.
         image_name = ''
         for counter, item in enumerate( dir_name_split ):
+            # In case the current item is not the first one and consists
+            # out of more than one character, prepend a '-' character
+            if 0<counter and 1<len(item):
+                image_name += '-'
+
             # Append the current item
             image_name += item
 
@@ -149,6 +154,9 @@ class DockerAutomizer(object):
             # out of more than one character, append a '-' character
             if counter<len(dir_name_split)-1 and 1<len(item):
                 image_name += '-'
+
+        # Replace '--' by '-'
+        image_name = re.sub('--', '-', image_name)
 
         # Only use lowercase characters
         image_name = image_name.lower()
