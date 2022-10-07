@@ -14,6 +14,9 @@ RUN pip install --upgrade pip
 # Install jupyterlab
 RUN pip install --no-cache-dir jupyterlab && useradd -ms /bin/bash lab
 
+# Install some modules for jupyterlab
+RUN pip install ipywidgets
+
 #######################################################
 # Install further python packages here
 #######################################################

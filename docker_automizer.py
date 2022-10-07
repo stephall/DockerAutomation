@@ -30,7 +30,7 @@ class DockerAutomizer(object):
             template = kwargs['template']
 
         # Python version
-        version = '3.8'
+        version = '3.9'
         if 'version' in kwargs:
             version = kwargs['version']
 
@@ -85,16 +85,31 @@ class DockerAutomizer(object):
         # Define a shell command to open Jupyter Notebook in the browser
         # Remark: 1) Wait some seconds before opening the Jupyter Notebook.
         #         2) We need to pass the jupyter token.
-        open_shell_command = 'sleep 7; open -a "Google Chrome" http://127.0.0.1:8888/lab?token=' + jupyter_token
+        open_browser_shell_command = 'sleep 7; open -a "Google Chrome" http://127.0.0.1:8888/lab?token=' + jupyter_token
 
         # Run the subprocesses
         processes = [
             subprocess.Popen(docker_shell_command, shell=True), 
-            subprocess.Popen(open_shell_command, shell=True),
+            subprocess.Popen(open_browser_shell_command, shell=True),
         ]
 
         # Collect process statuses
         exitcodes = [p.wait() for p in processes]
+
+    def exec(self, exec_command):
+        """
+        Run the container, which is associated with the docker image associated 
+        with the current directory), and execute a command within this container.
+        """
+        # Get the name of the docker image associated with the current directory
+        image_name = self._get_image_name()
+
+        # Construct the shell command to run the container and execute a command
+        # Remark: We provide the (local) port (of the computer), and the generated security token
+        docker_shell_command = 'docker run -it --rm -v "${PWD}":/home/lab ' + image_name + ' ' + exec_command
+
+        # Run the subprocesses
+        self._exec_shell_command(docker_shell_command)
 
     def display_image_name(self):
         """ Display how docker images are named in the current directory. """
@@ -132,6 +147,37 @@ class DockerAutomizer(object):
         # Get the name of the current directory
         dir_name = os.path.basename( os.getcwd() )
 
+        # In case that the directory name contains at least one underscore it is assumed 
+        # to be in 'Snake_Case' and otherwise in 'CamelCase'.
+        if '_' in dir_name:
+            # Construct the image name by mapping the directory name from 'Snake_Case'
+            # to 'kebab-case'.
+            image_name = self._map_snake_to_kebab_case(dir_name)
+        else:
+            # Construct the image name by mapping the directory name from 'CamelCase'
+            # to 'kebab-case'.
+            image_name = self._map_camel_to_kebab_case(dir_name)
+
+        # Get a (hexadecimal) hash of the current (absolute) directory path as string
+        dir_hash = self._get_dir_hash()
+
+        # Prefix the docker image by 'stephall/' and postfix it by the directory hash
+        # Remark: We add the hash just in case that a project (directory containing
+        #         the Dockerfile) might be named like an already existing one.
+        return 'stephall/' + image_name + '/' + dir_hash
+
+    def _map_snake_to_kebab_case(self, dir_name):
+        """ Map a directory name in 'Snake_Case' to 'kebab-case'."""
+        # Replace '_' in the directory name by '-' to obtain the image name
+        image_name = re.sub('_', '-', dir_name)
+
+        # Only use lowercase characters
+        image_name = image_name.lower()
+
+        return image_name
+
+    def _map_camel_to_kebab_case(self, dir_name):
+        """ Map a directory name in 'CamelCase' to 'kebab-case'."""
         # If there are upper case letters, split the directory name s.t.
         # these uppercased words are separated.
         dir_name_split = re.findall('[A-Z][^A-Z]*', dir_name)
@@ -161,13 +207,7 @@ class DockerAutomizer(object):
         # Only use lowercase characters
         image_name = image_name.lower()
 
-        # Get a (hexadecimal) hash of the current (absolute) directory path as string
-        dir_hash = self._get_dir_hash()
-
-        # Prefix the docker image by 'stephall/' and postfix it by the directory hash
-        # Remark: We add the hash just in case that a project (directory containing
-        #         the Dockerfile) might be named like an already existing one.
-        return 'stephall/' + image_name + '/' + dir_hash
+        return image_name
 
     def _generate_jupyter_token(self, length=20):
         """ Generate a jupyter token. """
